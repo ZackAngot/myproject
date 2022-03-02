@@ -1,170 +1,205 @@
-import React, { Component } from 'react';
-import {useState,useEffect} from 'react'
-import NumberFormat from 'react-number-format';
-
+import React from 'react'
+import { useReducer } from "react"
+import DigitButton from "./DigitButton"
+import OperationButton from "./OperationButton"
 import "./App.css"
+import NavBar from './NavBar'
+import "./NavBar.css"
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-  }
-  render() { 
-    const [preState,setPreState] = useState("")
-      const [curState,setCurState] = useState("")
-      const [input,setInput]=useState("0")
-      const[operator,setOperator]=useState(null)
-      const[total,setTotal] =useState(false)
-
-      const inputNum = (e) =>{
-        if(curState.includes(".") && e.target.innerText ===".")return;
-
-        if (total) {
-          setPreState("");
-        }
-        curState ? setCurState((pre) => pre + e.target.innerText)
-         : setCurState(e.target.innerText);
-        setTotal(false);
-
-      };
-      useEffect(() => {
-        setInput(curState);
-
-      },[curState] );
-
-      useEffect(() => {
-        setInput("0");
-      
-      
-      },[]);
-
-      const operatorType = (e) =>{
-        setTotal(false);
-        setOperator(e.target.innerText);
-        if(curState==="")return;
-        if(prestate !==""){
-          equals();
-
-        }else{
-        setPreState(curState);
-        setCurState("");
-        }
-
-
-      };
-
-      const equals = (e) =>{
-        if(e?.target.innerText==="="){
-        setTotal(true);
-      };
-      let cal
-      switch (operator) {
-        case "/":
-          cal=String(parseFloat(prestate)/parseFloat(curState));
-          
-          break;
-          case "+":
-          cal=String(parseFloat(prestate)+ parseFloat(curState));
-          break;
-
-          case "X":
-          cal=String(parseFloat(prestate) * parseFloat(curState));
-          break;
-
-          case "-":
-          cal=String(parseFloat(prestate) - parseFloat(curState));
-          break;
-          default:
-            return
-      }
-      setInput("");
-      setPreState(cal);
-      setCurState("");
-    }
-
-      const minusPlus = () =>{
-        if (curState.charAt(0)==="-"){
-          setCurState(curState.substring(1));
-        }else{
-          setCurState("-"+ curState);
-        }
-
-      };
-
-      const percent = () =>{
-        prestate ? setCurState(String(parseFloat(curState)/100 * prestate))
-        : setCurState(String(parseFloat(curState)/100));
-      };
-
-      const reset = () =>{
-        setPreState("");
-        setCurState("");
-        setInput(0);
-      };
-
-    return ( 
-      // <div className='container-fluid pt-2'>
-      //       <nav className="navbar navbar-dark ">
-      //  <div className="container-fluid">
-      //  <div classname="navbar-toggler " type="button" data-bs-toggle="collapse"
-      //   data-bs-target="#navbarToggleExternalContent" aria-controls="navbarToggleExternalContent" aria-expanded="false" 
-      //   aria-label="Toggle navigation">
-      //  <span className="navbar-toggler-icon "></span>
-      //  </div>
-      //  </div>
-      //  </nav>
-      //  <div className="collapse" id="navbarToggleExternalContent">
-      //  <div className=" p-4">
-      //  <nav className="nav">
-      //  <button className="btn btn-warning btn-md ">Color</button>
-      //  <button className="btn btn-warning btn-md">Theme</button>
-      //  <button className="btn btn-warning btn-md">History</button>
-      //  </nav>
-      //  </div>
-      //  </div>
-       
-      
-      
-       <div className='container'>
-        <div className='Wrapper'>
-          <div className='screen'> {input !=="" || input ==="0" ? 
-          <NumberFormat value={input} displayType={'text'} 
-          thousandSeparator={true} /> : <NumberFormat value={preState}
-          displayType={'text'} thousandSeparator={true}/> }</div>
-          <div className="btn btn-outline-warning" onClick={reset}>C</div>
-          <div className="btn btn-warning btn-md" onClick={percent}>%</div>
-         <div className="btn btn-warning btn-md" onClick={minusPlus}>+/-</div>
-         <div className="btn btn-warning btn-md" onClick={operatorType}>/</div>
-
-         <div className="btn btn-outline-light" onClick={inputNum}>7</div>
-         <div className="btn btn-outline-light" onClick={inputNum}>8</div>
-        < div className="btn btn-outline-light" onClick={inputNum}>9</div>
-          <div className="btn btn-warning btn-md" onClick={operatorType}>X</div>
-
-          <div className="btn btn-outline-light" onClick={inputNum}>4</div>
-         <div className="btn btn-outline-light" onClick={inputNum}>5</div>
-        < div className="btn btn-outline-light" onClick={inputNum}>6</div>
-          <div className="btn btn-warning btn-md" onClick={operatorType}>+</div>
-
-          <div className="btn btn-outline-light" onClick={inputNum}>1</div>
-         <div className="btn btn-outline-light" onClick={inputNum}>2</div>
-        < div className="btn btn-outline-light" onClick={inputNum}>3</div>
-        <div className="btn btn-warning btn-md" onClick={operatorType}>-</div>
-
-        <div className="btn btn-outline-light" onClick={inputNum}>0</div>
-        <div className="btn btn-outline-light" onClick={inputNum}>.</div>
-        <div className="btn btn-warning btn-md" onClick={equals}>-</div>
-
-        </div>
-
-      </div> 
-
-
-
-
-
-
-    )}
+export const ACTIONS = {
+    ADD_DIGIT: "add-digit",
+    CHOOSE_OPERATION: "choose-operation",
+    CLEAR: "clear",
+    DELETE_DIGIT: "delete-digit",
+    EVALUATE: "evaluate",
 }
 
+function reducer(state, { type, payload }) {
+    switch (type) {
+        case ACTIONS.ADD_DIGIT:
+            if (state.overwrite) {
+                return {
+                    ...state,
+                    currentOperand: payload.digit,
+                    overwrite: false,
+                }
+            }
+            if (payload.digit === "0" && state.currentOperand === "0") {
+                return state
+            }
+            if (payload.digit === "." && state.currentOperand === ".") {
+                return state
+            }
+
+            return {
+                ...state,
+                currentOperand: `${state.currentOperand || ""}${payload.digit}`,
+            }
+        case ACTIONS.CHOOSE_OPERATION:
+            if (state.currentOperand == null && state.previousOperand == null) {
+                return state
+            }
+
+            if (state.currentOperand == null) {
+                return {
+                    ...state,
+                    operation: payload.operation,
+                }
+            }
+
+            if (state.previousOperand == null) {
+                return {
+                    ...state,
+                    operation: payload.operation,
+                    previousOperand: state.currentOperand,
+                    currentOperand: null,
+                }
+            }
+
+            return {
+                ...state,
+                previousOperand: evaluate(state),
+                operation: payload.operation,
+                currentOperand: null,
+            }
+        case ACTIONS.CLEAR:
+            return {}
+        case ACTIONS.DELETE_DIGIT:
+            if (state.overwrite) {
+                return {
+                    ...state,
+                    overwrite: false,
+                    currentOperand: null,
+                }
+            }
+            if (state.currentOperand == null) return state
+            if (state.currentOperand.length === 1) {
+                return { ...state, currentOperand: null }
+            }
+
+            return {
+                ...state,
+                currentOperand: state.currentOperand.slice(0, -1),
+            }
+        case ACTIONS.EVALUATE:
+            if (
+                state.operation == null ||
+                state.currentOperand == null ||
+                state.previousOperand == null
+            ) {
+                return state
+            }
+
+            return {
+                ...state,
+                overwrite: true,
+                previousOperand: null,
+                operation: null,
+                currentOperand: evaluate(state),
+            }
+    }
+}
+
+function evaluate({ currentOperand, previousOperand, operation }) {
+    const prev = parseFloat(previousOperand)
+    const current = parseFloat(currentOperand)
+    if (isNaN(prev) || isNaN(current)) return ""
+    let computation = ""
+    switch (operation) {
+        case "+":
+            computation = prev + current
+            break
+        case "−":
+            computation = prev - current
+            break
+        case "x":
+            computation = prev * current
+            break
+        case "÷":
+            computation = prev / current
+            break
+    }
+
+    return computation.toString()
+}
+
+const INTEGER_FORMATTER = new Intl.NumberFormat("en-us", {
+    maximumFractionDigits: 0,
+})
+function formatOperand(operand) {
+    if (operand == null) return
+    const [integer, decimal] = operand.split(".")
+    if (decimal == null) return INTEGER_FORMATTER.format(integer)
+    return `${INTEGER_FORMATTER.format(integer)}.${decimal}`
+}
+
+function App() {
+    const [{ currentOperand, previousOperand, operation }, dispatch] = useReducer(
+        reducer,
+        {}
+    )
+
+    return (
+        <div className='conatiner'>
+            <div> <NavBar/></div>
+
+    
+        <div className="calculator-grid">
+           
+    <div className="output">
+        <div className="previous-operand">{formatOperand(previousOperand)} {operation}</div>
+        
+        <div className="current-operand">{formatOperand(currentOperand)}</div>
+        </div>
+        
+       
+        
+     
+
+         <button className=" span-two btn btn-outline-warning btn-lg" 
+        onClick={() => dispatch({ type: ACTIONS.CLEAR })}>C</button>
+
+      <button className="btn btn-warning btn-lg" onClick={() => dispatch({ type: ACTIONS.DELETE_DIGIT })}>DEL</button>
+      <OperationButton operation="÷" dispatch={dispatch} />
+      
+
+      
+      <DigitButton  digit="7" dispatch={dispatch} />
+       <DigitButton digit="8" dispatch={dispatch} />
+      <DigitButton digit="9" dispatch={dispatch} />
+      <OperationButton operation="−" dispatch={dispatch} />
+      
+     
+
+      
+      <DigitButton digit="4" dispatch={dispatch} />
+      <DigitButton digit="5" dispatch={dispatch} />
+      <DigitButton digit="6" dispatch={dispatch} />
+      <OperationButton operation="+" dispatch={dispatch} />
+      
+     
+
+      
+     <DigitButton digit="1" dispatch={dispatch} />
+      <DigitButton digit="2" dispatch={dispatch} />
+      <DigitButton digit="3" dispatch={dispatch} />
+      <OperationButton operation="x" dispatch={dispatch} />
+      
+      
+      
+
+      
+      <DigitButton digit="0" dispatch={dispatch} />
+      <DigitButton digit="." dispatch={dispatch} />
+      <button className=" span-two btn btn-warning btn-lg" 
+      onClick={() => dispatch({ type: ACTIONS.EVALUATE })}> =</button>
+       
+
+      
+
+</div>
+</div>
+    );
+}
 
 export default App;

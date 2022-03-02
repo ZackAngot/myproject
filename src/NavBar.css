@@ -1,0 +1,23 @@
+.btn{
+   size: 1rem ;
+}
+.navbar{
+  background-color: rgb(119, 13, 195);
+}
+.offcanvas{
+  background-color: rgb(119, 13, 195);
+
+}
+.navbar.btn{
+  size-adjust: auto;
+}
+.dropdown-menu{
+  background-color: rgb(119, 13, 195);
+
+}
+.offcanvas-title{
+  color: white;
+}
+.dropdown-item{
+  color: gold;
+}
